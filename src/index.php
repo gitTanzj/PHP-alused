@@ -5,15 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHP projekt</title>
-    <link href="./css/output.css" rel="stylesheet">
+    <link href="./css/index.css" rel="stylesheet">
 </head>
 
-<body class="flex justify-center w-full">
-    <div class="flex justify-center w-full h-full">
-        <h1 class="text-3xl font-bold">Hello</h1>
-        <form>
-            <label>username</label>
-            <input name="username" type="text">
+<body>
+    <div class="main-container">
+        <h1>Send your greetings!</h1>
+        <form class="greeting-form" action="<?php echo $_SERVER['PHP_SELF']; ?>" method="POST">
+            <label>Message</label>
+            <input name="message" type="text">
+            <button type="submit">Send</button>
         </form>
     </div>
 </body>
@@ -21,21 +22,21 @@
 </html>
 
 <?php
+require_once 'inc/db.php';
 
 if ($_POST) {
-    $body = file_get_contents('//');
+    $message = htmlspecialchars($_POST["message"]);
+    if (empty($message)) {
+        echo "nothing was sent";
+    } else {
+        echo "" . $message . "";
 
-    $db_server = 'localhost';
-    $db_user = 'root';
-    $db_pass = "";
-    $db_name = "users";
-    $conn = "";
+        try {
+            $db = new Database();
 
-    try {
-        $conn = mysqli_connect($db_server, $db_user, $db_pass, $db_name);
-    } catch (Exception $e) {
-        die($e->getMessage());
+        } catch (Exception $e) {
+            echo "" . $e->getMessage() . "";
+        }
     }
 }
-;
 ?>
