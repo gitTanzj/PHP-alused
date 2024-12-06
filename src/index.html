@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP projekt</title>
+    <link href="./css/index.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="main-container">
+        <h1>Sign up</h1>
+        <div>
+            <p id="login-msg">msg</p>
+        </div>
+        <form class="greeting-form" onsubmit="submitForm();">
+            <label>Username</label>
+            <input class="text-input" name="username" type="text">
+            <label>Password</label>
+            <input class="text-input" name="password" type="password">
+            <label>Confirm password</label>
+            <input class="text-input" name="confirm-password" type="password">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+</body>
+
+</html>
+
+<script>
+    const submitForm = () => {
+        
+
+        let text = document.getElementsByClassName("text-input").values;
+
+        if (text.trim() === "") {
+            alert("Palun sisestage kõik väljad enne saatmist!")
+            return;
+        }
+
+        const pwd1 = document.getElementsByName('password').value;
+        const pwd2 = document.getElementByName('confirm-password').value;
+
+        if (pwd1 === pwd2) {
+            fetch('login.php', {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }, 
+                method: 'POST'
+            })
+            .then(() => {
+                let alertElem = document.getElementById("login-msg");
+                alertElem.innerHTML = "Konto loomine õnnestus";
+                alertElem
+                alertElem.style.display = "flex";
+
+                document.getElementsByClassName("text-input").values = "";
+
+                setTimeout(() => {
+                    alertElem.style.display = "none";
+                }, 3000)
+            })
+            .catch((e) => {
+                alert('Midagi läks valesti.')
+            })
+
+            xhr.send("text=" + encodeURIComponent(text))
+        } else {
+            alert("Passwordid ei matchi.")
+        };
+    }
+
+</script>
