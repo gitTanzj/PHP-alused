@@ -6,28 +6,39 @@ if ($_POST) {
         echo "nothing was sent";
     } else {
 
-        try {
-            $db = new mysqli('localhost', 'root', 'qwerty', 'users', 3306);
+        $username = htmlspecialchars($body["username"], ENT_QUOTES, 'UTF-8');
+        $password = htmlspecialchars($body["password"], ENT_QUOTES, 'UTF-8');
 
-            if ($db->connect_error) {
-                die("Connection failed: " . $db->connect_error);
+        try {
+            $db = mysqli_init();
+            mysqli_real_connect($db, 'localhost', 'root', 'qwerty', 'users', 3306);
+
+            if (mysqli_connect_errno()) {
+                die("Connection failed: " . mysqli_connect_error());
             }
 
-            $username = $body["username"];
-            $password = $body["password"];
-            $id = $db->query('SELECT ID FROM USERS ORDER BY ID DESC LIMIT 1')->num_rows + 1;
+            $result = mysqli_query($db, 'SELECT ID FROM users ORDER BY ID DESC LIMIT 1');
+            if ($row = mysqli_fetch_assoc($result)) {
+                $id = (int)$row['ID'] + 1;
+            } else {
+                $id = 1;
+            }
             echo $id;
 
-            $sql = 'INSERT INTO USERS (ID, USERNAME, PASSWORD) VALUES (?, ?, ?)';
-            $stmt = $db->prepare($sql);
-            $stmt->bind_param('sss', $id, $username, $password);
-            $stmt->execute();
-            $stmt->close();
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-            header('HTTP/1.1 200 OK');
+            $sql = 'INSERT INTO users (ID, USERNAME, PASSWORD) VALUES (?, ?, ?)';
+            $stmt = mysqli_prepare($db, $sql);
+            mysqli_stmt_bind_param($stmt, 'iss', $id, $username, $hashedPassword);
+            mysqli_stmt_execute($stmt);
 
+            http_response_code(200);
+            echo "User created successfully";
+
+            mysqli_stmt_close($stmt);
+            mysqli_close($db);
         } catch (Exception $e) {
-            header('HTTP/1.1 500 Server Error');
+            echo "". $e->getMessage();
         }
     }
 }
