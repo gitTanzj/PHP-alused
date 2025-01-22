@@ -1,45 +1,75 @@
-<?php 
-    include "db.php";
-    require "vendor/autoload.php";
-    // use PHPMailer\PHPMailer\PHPMailer;
-    // use PHPMailer\PHPMailer\SMTP;
-    // use PHPMailer\PHPMailer\Exception;
+<?php
+include "db.php";
+require "vendor/autoload.php";
+// use PHPMailer\PHPMailer\PHPMailer;
+// use PHPMailer\PHPMailer\SMTP;
+// use PHPMailer\PHPMailer\Exception;
 
-    // $mail = new PHPMailer(true);
+// $mail = new PHPMailer(true);
 
+if (isset($_POST)) {
+    header('Content-Type: application/json');
     $requestPayload = file_get_contents("php://input");
     $request = json_decode($requestPayload, true);
 
-    $name = $request['name'];
-    $email = $request['email'];
-    $message = $request['message'];
-
-
-    if(!$request){
+    if (!$request) {
         http_response_code(400);
         echo json_encode(["error" => "Invalid JSON"]);
         exit;
     }
 
+    $name = $request['name'] ?? '';
+    $email = $request['email'] ?? '';
+    $message = $request['message'] ?? '';
+
+    if (empty($message)) {
+        http_response_code(400);
+        echo json_encode(["error" => "Message is required"]);
+        exit;
+    }
+
     $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
+    $pdf->SetCreator(PDF_CREATOR);
+    $pdf->SetAuthor('Autor');
+    $pdf->SetTitle('Joulutervitus');
+    $pdf->SetSubject('Joulutervitamine');
+    $pdf->SetKeywords('TCPDF, PDF');
+
+    $pdf->SetHeaderData('', 0, 'Joulutervitus', 'Generated using TCPDF');
+
+    $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+
+    $pdf->SetMargins(15, 27, 15);
+    $pdf->SetHeaderMargin(5);
+    $pdf->SetFooterMargin(10);
+
+    $pdf->SetAutoPageBreak(true, 25);
+
+    $pdf->SetFont('helvetica', '', 12);
+
     $pdf->AddPage();
-    $pdf->SetFont('Bigelow Rules', '', 56);
-    $pdf->Cell(0, 10, $message . ': ' . $name, 0, 1, 'C');
 
-    $pdf->Output('./pdfs/' . $name . '.pdf', 'F');
+    $html = <<<EOD
+    <h1 style="color: #2c3e50; text-align: center;">{$message}</h1>
+    EOD;
 
-    // $mail->SMTPDebug = SMTP::DEBUG_SERVER;                      //Enable verbose debug output
-    // $mail->isSMTP();                                            //Send using SMTP
-    // $mail->Host       = 'smtp.gmail.com';                     //Set the SMTP server to send through
-    // $mail->SMTPAuth   = true;                                   //Enable SMTP authentication
-    // $mail->Username   = 'kalleita22@ikt.khk.ee';                     //SMTP username
-    // $mail->Password   = 'qwerty';                               //SMTP password
-    // $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;            //Enable implicit TLS encryption
-    // $mail->Port       = 465;   
+    $pdf->writeHTML($html, true, false, true, false, '');
 
+    $directory = __DIR__ . '/pdfs';
 
+    if (!is_dir($directory)) {
+        mkdir($directory, 0777, true);
+    }
 
-    
-    echo json_encode(["success" => "Request processed"]);
+    $uniqueFilename = uniqid('tervitus_', true) . '.pdf';
+    $filePath = $directory . '/' . $uniqueFilename;
+    $pdf->Output($filePath, 'F');
+
+    echo json_encode([
+        "success" => true,
+        "message" => "PDF has been generated successfully",
+        "filePath" => $filePath
+    ]);
+} 
 ?>
