@@ -28,6 +28,22 @@ if (isset($_POST)) {
         exit;
     }
 
+    $check_stmt = $pdo->prepare('SELECT * FROM LOGS WHERE EMAIL = :email');
+    $check_stmt->execute([
+        ':email' => $email 
+    ]);
+    $check = $check_stmt->fetch(PDO::FETCH_ASSOC);
+    if(!empty($check)) {
+        $lastLogTime = strtotime($check['LOGTIME'] ?? '');
+        $thirtyMinutesAgo = strtotime('-30 minutes');
+        
+        if($lastLogTime && $lastLogTime > $thirtyMinutesAgo) {
+            http_response_code(400);
+            echo json_encode(["error" => "Sellele tüübile saadeti kiri viimase 30 min sees. Oled kindel, et tahad uut saata?"]);
+            exit;
+        }
+    }
+
     $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
     $pdf->SetCreator(PDF_CREATOR);
@@ -51,7 +67,10 @@ if (isset($_POST)) {
     $pdf->AddPage();
 
     $html = <<<EOD
-    <h1 style="color: #2c3e50; text-align: center;">{$message}</h1>
+        <div>
+            <p style="font-size: 48px;">$name saatis sulle kevadise tervituse!</p>
+            <h1 style="font-size: 72px; color: green;">$message</h1>
+        </div>
     EOD;
 
     $pdf->writeHTML($html, true, false, true, false, '');
@@ -66,9 +85,24 @@ if (isset($_POST)) {
     $filePath = $directory . '/' . $uniqueFilename;
     $pdf->Output($filePath, 'F');
 
+    $count_stmt = $pdo->prepare('SELECT MAX(ID) as max_id FROM LOGS');
+    $count_stmt->execute();
+    $count = $count_stmt->fetch(PDO::FETCH_ASSOC);
+    $next_id = ($count['max_id'] ?? 0) + 1;
+
+    $stmt = $pdo->prepare('INSERT INTO LOGS (ID, PDF, EMAIL, NAME, MESSAGE, LOGTIME) VALUES (:id, :pdf, :email, :name, :message, :logtime)');
+    $stmt->execute([
+        ':id' => $next_id,
+        ':pdf' => $filePath,
+        ':email' => $email,
+        ':name' => $name,
+        ':message' => $message,
+        ':logtime' => date('Y-m-d H:i:s')
+    ]);
+
     echo json_encode([
         "success" => true,
-        "message" => "PDF has been generated successfully",
+        "message" => "PDF has been generated successfully and logged",
         "filePath" => $filePath
     ]);
 } 
