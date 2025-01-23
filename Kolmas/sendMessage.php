@@ -1,11 +1,15 @@
 <?php
 include "db.php";
 require "vendor/autoload.php";
-// use PHPMailer\PHPMailer\PHPMailer;
-// use PHPMailer\PHPMailer\SMTP;
-// use PHPMailer\PHPMailer\Exception;
+require __DIR__ . '/vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
-// $mail = new PHPMailer(true);
+$mail = new PHPMailer(true);
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
 
 if (isset($_POST)) {
     header('Content-Type: application/json');
@@ -90,20 +94,63 @@ if (isset($_POST)) {
     $count = $count_stmt->fetch(PDO::FETCH_ASSOC);
     $next_id = ($count['max_id'] ?? 0) + 1;
 
-    $stmt = $pdo->prepare('INSERT INTO LOGS (ID, PDF, EMAIL, NAME, MESSAGE, LOGTIME) VALUES (:id, :pdf, :email, :name, :message, :logtime)');
-    $stmt->execute([
-        ':id' => $next_id,
-        ':pdf' => $filePath,
-        ':email' => $email,
-        ':name' => $name,
-        ':message' => $message,
-        ':logtime' => date('Y-m-d H:i:s')
-    ]);
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    header('Content-Type: application/json');
+    
+    $response = [];
+    
+    try {
+        $mail = new PHPMailer(true);
+    
+        // Server settings
+        $mail->SMTPDebug = 0;
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'kalleriit@gmail.com';
+        $mail->Password   = $_ENV['EMAIL_PASSWORD'];
+        $mail->SMTPSecure = 'tls';
+        $mail->Port       = 587;
+    
+        // Recipients
+        $mail->setFrom('kalleriit@gmail.com', 'Kalle Riit');
+        $mail->addAddress($email);
+    
+        // Optional: Add attachment
+        if (!empty($filePath)) {
+            $mail->addAttachment($filePath);
+        }
+    
+        // Email content
+        $mail->isHTML(true);
+        $mail->Subject = 'Here is the subject';
+        $mail->Body    = 'This is the HTML message body <b>in bold!</b>';
+        $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+    
+        // Send email
+        $mail->send();
+    
+        $response['success'] = true;
+        $response['message'] = 'Message has been sent';
 
-    echo json_encode([
-        "success" => true,
-        "message" => "PDF has been generated successfully and logged",
-        "filePath" => $filePath
-    ]);
-} 
+        $stmt = $pdo->prepare('INSERT INTO LOGS (ID, PDF, EMAIL, NAME, MESSAGE, LOGTIME) VALUES (:id, :pdf, :email, :name, :message, :logtime)');
+        $stmt->execute([
+            ':id' => $next_id,
+            ':pdf' => $filePath,
+            ':email' => $email,
+            ':name' => $name,
+            ':message' => $message,
+            ':logtime' => date('Y-m-d H:i:s')
+        ]);
+    } catch (Exception $e) {
+        $response['success'] = false;
+        $response['error'] = "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        $response['dataUsed'] = 'Email '. $email . ' password '. $_ENV['EMAIL_PASSWORD'];
+    }
+    
+    // Output JSON and terminate
+    echo json_encode($response);
+    exit;
+}   
 ?>

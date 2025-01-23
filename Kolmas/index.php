@@ -14,7 +14,7 @@
         <input name="message" id="message" required />
         <label for="name">Sisesta enda nimi</label>
         <input name="name" id="name" required />
-        <label for="email">Sisesta enda e-post</label>
+        <label for="email">Sisesta e-post kellele saata</label>
         <input name="email" id="email" required />
         <button type="submit">Saada</button>
     </form>
@@ -36,19 +36,21 @@
                 },
                 body: JSON.stringify(jsonData)
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Sõnum edukalt saadetud!');
-                        document.getElementById('messageForm').reset();
-                    } else {
-                        alert('Viga sõnumi saatmisel: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Viga sõnumi saatmisel. Palun proovige uuesti.');
-                });
+            .then(response => response.text())
+            .then(text => {
+                console.log('Raw Response:', text);
+                const data = JSON.parse(text); // Attempt to parse the JSON
+                if (data.success) {
+                    alert('Sõnum edukalt saadetud!');
+                    document.getElementById('messageForm').reset();
+                } else {
+                    alert('Viga sõnumi saatmisel: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Viga sõnumi saatmisel. Palun proovige uuesti.');
+            });
         });
     </script>
 </body>
